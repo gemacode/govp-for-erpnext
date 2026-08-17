@@ -1,3 +1,5 @@
+from datetime import date
+
 import frappe
 from frappe.tests.utils import FrappeTestCase
 from unittest.mock import patch
@@ -138,6 +140,36 @@ class TestGovpErpnextLifecycle(FrappeTestCase):
             "Item Group", "item_group_name", "parent_item_group",
             "All GOVP Item Groups", "GOVP Native Services",
         )
+        if not frappe.db.exists("UOM", "GOVP Unit"):
+            frappe.get_doc({
+                "doctype": "UOM",
+                "uom_name": "GOVP Unit",
+                "must_be_whole_number": 1,
+                "enabled": 1,
+            }).insert(ignore_permissions=True)
+        current_year = frappe.utils.getdate().year
+        fiscal_year = f"GOVP Native {current_year}"
+        if not frappe.db.exists("Fiscal Year", fiscal_year):
+            frappe.get_doc({
+                "doctype": "Fiscal Year",
+                "year": fiscal_year,
+                "year_start_date": date(current_year, 1, 1),
+                "year_end_date": date(current_year, 12, 31),
+                "disabled": 0,
+            }).insert(ignore_permissions=True)
+        for price_list, buying, selling in (
+            ("GOVP Native Buying", 1, 0),
+            ("GOVP Native Selling", 0, 1),
+        ):
+            if not frappe.db.exists("Price List", price_list):
+                frappe.get_doc({
+                    "doctype": "Price List",
+                    "price_list_name": price_list,
+                    "currency": "EUR",
+                    "buying": buying,
+                    "selling": selling,
+                    "enabled": 1,
+                }).insert(ignore_permissions=True)
 
         if not frappe.db.exists("Customer", "GOVP Native Customer"):
             frappe.get_doc({
@@ -159,7 +191,7 @@ class TestGovpErpnextLifecycle(FrappeTestCase):
                 "item_code": "GOVP-NATIVE-SERVICE",
                 "item_name": "GOVP Native Service",
                 "item_group": item_group,
-                "stock_uom": "Nos",
+                "stock_uom": "GOVP Unit",
                 "is_stock_item": 0,
             }).insert(ignore_permissions=True)
 
@@ -167,6 +199,9 @@ class TestGovpErpnextLifecycle(FrappeTestCase):
             "doctype": "Delivery Note",
             "company": company,
             "customer": "GOVP Native Customer",
+            "selling_price_list": "GOVP Native Selling",
+            "price_list_currency": "EUR",
+            "plc_conversion_rate": 1,
             "items": [{
                 "item_code": "GOVP-NATIVE-SERVICE",
                 "qty": 2,
@@ -189,6 +224,9 @@ class TestGovpErpnextLifecycle(FrappeTestCase):
             "company": company,
             "supplier": "GOVP Native Supplier",
             "govp_reference": "GOVP-NATIVE-RECEIPT",
+            "buying_price_list": "GOVP Native Buying",
+            "price_list_currency": "EUR",
+            "plc_conversion_rate": 1,
             "items": [{
                 "item_code": "GOVP-NATIVE-SERVICE",
                 "qty": 3,
