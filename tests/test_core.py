@@ -1,5 +1,6 @@
 import json
 import pathlib
+import re
 import sys
 import tomllib
 import unittest
@@ -79,6 +80,14 @@ class StructureTest(unittest.TestCase):
         with (ROOT / "pyproject.toml").open("rb") as handle:
             project = tomllib.load(handle)["project"]
         self.assertEqual(project["name"], "govp_erpnext")
+
+    def test_release_version_is_consistent(self):
+        with (ROOT / "pyproject.toml").open("rb") as handle:
+            version = tomllib.load(handle)["project"]["version"]
+        package = (ROOT / "govp_erpnext/__init__.py").read_text()
+        client = (ROOT / "govp_erpnext/client.py").read_text()
+        self.assertIn(f'__version__ = "{version}"', package)
+        self.assertIsNotNone(re.search(rf"GOVP-for-ERPNext/{re.escape(version)}\b", client))
 
     def test_hooks_cover_delivery_receipt_and_scheduler(self):
         hooks = (ROOT / "govp_erpnext/hooks.py").read_text()

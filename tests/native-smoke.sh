@@ -16,7 +16,7 @@ fi
 cleanup() {
   bench --site "$site" uninstall-app govp_erpnext --yes --no-backup >/dev/null 2>&1 || true
   if [ "$linked_app" = 1 ]; then
-    ./env/bin/pip uninstall -y govp-for-erpnext >/dev/null 2>&1 || true
+    ./env/bin/pip uninstall -y govp_erpnext >/dev/null 2>&1 || true
     find apps/govp_erpnext -type l -delete 2>/dev/null || true
   fi
   if [ "$apps_txt_added" = 1 ]; then

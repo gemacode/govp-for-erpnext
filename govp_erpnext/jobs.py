@@ -51,7 +51,7 @@ def process_due_jobs(limit=50):
     names = frappe.get_all("GOVP Job", filters={
         "status": ["in", ["Pending", "Retry"]],
         "next_attempt_at": ["<=", now_datetime()],
-    }, order_by="creation asc", limit_page_length=min(int(limit), 100), pluck="name")
+    }, order_by="creation asc", limit=min(int(limit), 100), pluck="name")
     for name in names:
         job = frappe.get_doc("GOVP Job", name)
         try:
