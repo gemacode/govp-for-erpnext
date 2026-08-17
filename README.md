@@ -9,9 +9,9 @@ empresa con GOVP Exchange sin exigirle programar:
 - separa credenciales, idempotencia y cola por compañía;
 - reintenta fallos transitorios sin duplicar GOVP.
 
-## Estado 0.1.0
+## Estado 0.1.1
 
-Candidato abierto. El núcleo, el contrato Frappe y 17 pruebas autocontenidas
+Candidato abierto. El núcleo, el contrato Frappe y 18 pruebas autocontenidas
 están verificados. La puerta nativa —instalación, migración, envío y recepción en
 ERPNext— permanece explícitamente abierta hasta ejecutar `native-smoke.sh` en un
 bench ERPNext 15 o 16. No se declara listo para producción antes de esa prueba.

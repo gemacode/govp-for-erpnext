@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.1 - 2026-08-17
+
+- El nombre de distribución coincide con el nombre técnico Frappe
+  `govp_erpnext`, de modo que `bench get-app` y las imágenes por capas no
+  renombran la app a un módulo inexistente.
+- Prueba de regresión para el contrato entre el paquete Python y Frappe.
+
 ## 0.1.0 - 2026-08-17
 
 - App Frappe abierta para ERPNext 15/16.

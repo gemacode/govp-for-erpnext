@@ -1,6 +1,7 @@
 import json
 import pathlib
 import sys
+import tomllib
 import unittest
 from datetime import datetime, timezone
 
@@ -74,6 +75,11 @@ class CoreTest(unittest.TestCase):
 
 
 class StructureTest(unittest.TestCase):
+    def test_distribution_name_matches_frappe_app_name(self):
+        with (ROOT / "pyproject.toml").open("rb") as handle:
+            project = tomllib.load(handle)["project"]
+        self.assertEqual(project["name"], "govp_erpnext")
+
     def test_hooks_cover_delivery_receipt_and_scheduler(self):
         hooks = (ROOT / "govp_erpnext/hooks.py").read_text()
         for fragment in ["Delivery Note", "Purchase Receipt", "on_submit", "*/5 * * * *", "required_apps"]:
