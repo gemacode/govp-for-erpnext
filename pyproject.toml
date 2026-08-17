@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "govp-for-erpnext"
+version = "0.1.0"
+description = "Open-source GOVP Exchange connector for ERPNext"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "Apache-2.0"
+authors = [{ name = "Gemacode" }]
+classifiers = [
+  "Framework :: Frappe",
+  "Programming Language :: Python :: 3",
+]
+
+[project.urls]
+Homepage = "https://downloads.govp.io"
+Repository = "https://github.com/gemacode/govp-for-erpnext"
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+include = ["govp_erpnext*"]

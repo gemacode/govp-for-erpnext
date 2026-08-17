@@ -1,0 +1,24 @@
+name: Error en GOVP for ERPNext
+description: Comunica un fallo sin incluir secretos ni datos personales.
+title: "[Bug] "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: No pegues tokens, datos de clientes ni GOVP de producción.
+  - type: input
+    id: versions
+    attributes:
+      label: Versiones
+      description: Versiones de GOVP for ERPNext, ERPNext y Frappe.
+    validations: { required: true }
+  - type: textarea
+    id: steps
+    attributes:
+      label: Pasos reproducibles
+    validations: { required: true }
+  - type: textarea
+    id: expected
+    attributes:
+      label: Resultado esperado y obtenido
+    validations: { required: true }

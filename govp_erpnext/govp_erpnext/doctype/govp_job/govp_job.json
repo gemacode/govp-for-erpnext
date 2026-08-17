@@ -1,0 +1,25 @@
+{
+  "doctype":"DocType",
+  "name":"GOVP Job",
+  "module":"GOVP ERPNext",
+  "autoname":"hash",
+  "track_changes":1,
+  "sort_field":"creation",
+  "sort_order":"DESC",
+  "fields":[
+    {"fieldname":"company","label":"Compañía","fieldtype":"Link","options":"Company","reqd":1,"in_list_view":1},
+    {"fieldname":"source_doctype","label":"Tipo de origen","fieldtype":"Data","reqd":1},
+    {"fieldname":"source_name","label":"Documento","fieldtype":"Dynamic Link","options":"source_doctype","reqd":1,"in_list_view":1},
+    {"fieldname":"action","label":"Acción","fieldtype":"Select","options":"Issue\nVerify\nReconcile","reqd":1,"in_list_view":1},
+    {"fieldname":"reference","label":"Referencia GOVP","fieldtype":"Data"},
+    {"fieldname":"idempotency_key","label":"Clave de idempotencia","fieldtype":"Data","reqd":1,"unique":1},
+    {"fieldname":"status","label":"Estado","fieldtype":"Select","options":"Pending\nProcessing\nRetry\nCompleted\nNeeds Attention","reqd":1,"default":"Pending","in_list_view":1},
+    {"fieldname":"attempts","label":"Intentos","fieldtype":"Int","default":"0"},
+    {"fieldname":"next_attempt_at","label":"Próximo intento","fieldtype":"Datetime","default":"Now"},
+    {"fieldname":"govp_code","label":"GOVP","fieldtype":"Data","read_only":1},
+    {"fieldname":"last_error","label":"Última incidencia","fieldtype":"Small Text","read_only":1}
+  ],
+  "permissions":[
+    {"role":"System Manager","read":1,"write":1,"create":1,"delete":1,"report":1,"export":1}
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "doctype": "DocType",
+  "name": "GOVP Company Settings",
+  "module": "GOVP ERPNext",
+  "autoname": "field:company",
+  "title_field": "company",
+  "track_changes": 1,
+  "fields": [
+    {"fieldname":"company","label":"Compañía","fieldtype":"Link","options":"Company","reqd":1,"unique":1,"in_list_view":1},
+    {"fieldname":"enabled","label":"Activo","fieldtype":"Check","default":"1","in_list_view":1},
+    {"fieldname":"exchange_url","label":"URL GOVP Exchange","fieldtype":"Data","default":"https://partners.gemacode.org/api/exchange","reqd":1},
+    {"fieldname":"connector_token","label":"Token del conector","fieldtype":"Password","reqd":1},
+    {"fieldname":"validity_days","label":"Validez (días)","fieldtype":"Int","default":"365","reqd":1},
+    {"fieldname":"auto_issue_delivery","label":"Emitir al enviar","fieldtype":"Check","default":"1"},
+    {"fieldname":"auto_verify_receipt","label":"Comprobar al recibir","fieldtype":"Check","default":"1"}
+  ],
+  "permissions": [
+    {"role":"System Manager","read":1,"write":1,"create":1,"delete":1,"report":1,"export":1,"share":1,"print":1,"email":1}
+  ]
+}
