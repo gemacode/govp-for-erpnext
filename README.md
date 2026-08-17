@@ -45,6 +45,9 @@ bash tests/native-smoke.sh /ruta/a/frappe-bench sitio.local
 La segunda orden instala la app en un sitio nativo existente, ejecuta sus tests y
 desinstala únicamente la app. Nunca elimina el sitio ni la base de datos.
 
+La matriz, las versiones y las puertas restantes están documentadas en
+[NATIVE_VALIDATION.md](NATIVE_VALIDATION.md).
+
 ## Datos y seguridad
 
 No se transmiten nombres, correo, dirección o teléfono del cliente/proveedor.
