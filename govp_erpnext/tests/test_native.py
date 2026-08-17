@@ -41,6 +41,23 @@ def _settings(company):
     }).insert(ignore_permissions=True)
 
 
+def _tree_leaf(doctype, name_field, parent_field, root, leaf):
+    if not frappe.db.exists(doctype, root):
+        frappe.get_doc({
+            "doctype": doctype,
+            name_field: root,
+            "is_group": 1,
+        }).insert(ignore_permissions=True)
+    if not frappe.db.exists(doctype, leaf):
+        frappe.get_doc({
+            "doctype": doctype,
+            name_field: leaf,
+            parent_field: root,
+            "is_group": 0,
+        }).insert(ignore_permissions=True)
+    return leaf
+
+
 def _source(company, reference=None, code=None):
     return frappe._dict({
         "doctype": "Company",
@@ -73,23 +90,6 @@ class TestGovpErpnextInstallation(FrappeTestCase):
 class TestGovpErpnextLifecycle(FrappeTestCase):
     def setUp(self):
         super().setUp()
-        if not frappe.db.exists("Company"):
-            try:
-                from erpnext.setup.utils import before_tests
-            except ImportError:
-                # ERPNext 16 removed its private test bootstrap helper. The
-                # public setup stages provide the same master-data fixtures
-                # before company creation on a clean site.
-                from erpnext.setup.setup_wizard.setup_wizard import stage_fixtures
-
-                if not frappe.db.exists("Customer Group"):
-                    stage_fixtures(frappe._dict({"country": "Spain"}))
-                _company("GOVP Native A", "GVNA")
-            else:
-                before_tests()
-            # Native bootstrap data must survive the per-test rollback. This
-            # mirrors ERPNext 15's before_tests helper on ERPNext 16.
-            frappe.db.commit()
         self.company_a = _company("GOVP Native A", "GVNA")
         self.company_b = _company("GOVP Native B", "GVNB")
         if not frappe.defaults.get_global_default("company"):
@@ -122,27 +122,43 @@ class TestGovpErpnextLifecycle(FrappeTestCase):
         company = get_default_company()
         _settings(company)
         warehouse = frappe.db.get_value("Warehouse", {"company": company, "is_group": 0}, "name")
+        customer_group = _tree_leaf(
+            "Customer Group", "customer_group_name", "parent_customer_group",
+            "All GOVP Customer Groups", "GOVP Native Customers",
+        )
+        territory = _tree_leaf(
+            "Territory", "territory_name", "parent_territory",
+            "All GOVP Territories", "GOVP Native Territory",
+        )
+        supplier_group = _tree_leaf(
+            "Supplier Group", "supplier_group_name", "parent_supplier_group",
+            "All GOVP Supplier Groups", "GOVP Native Suppliers",
+        )
+        item_group = _tree_leaf(
+            "Item Group", "item_group_name", "parent_item_group",
+            "All GOVP Item Groups", "GOVP Native Services",
+        )
 
         if not frappe.db.exists("Customer", "GOVP Native Customer"):
             frappe.get_doc({
                 "doctype": "Customer",
                 "customer_name": "GOVP Native Customer",
                 "customer_type": "Company",
-                "customer_group": "Commercial",
-                "territory": "Rest Of The World",
+                "customer_group": customer_group,
+                "territory": territory,
             }).insert(ignore_permissions=True)
         if not frappe.db.exists("Supplier", "GOVP Native Supplier"):
             frappe.get_doc({
                 "doctype": "Supplier",
                 "supplier_name": "GOVP Native Supplier",
-                "supplier_group": "Services",
+                "supplier_group": supplier_group,
             }).insert(ignore_permissions=True)
         if not frappe.db.exists("Item", "GOVP-NATIVE-SERVICE"):
             frappe.get_doc({
                 "doctype": "Item",
                 "item_code": "GOVP-NATIVE-SERVICE",
                 "item_name": "GOVP Native Service",
-                "item_group": "Services",
+                "item_group": item_group,
                 "stock_uom": "Nos",
                 "is_stock_item": 0,
             }).insert(ignore_permissions=True)
