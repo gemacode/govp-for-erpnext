@@ -22,7 +22,7 @@ class GovpExchangeClient:
         headers = {
             "Accept": "application/json",
             "Authorization": f"Bearer {self.token}",
-            "User-Agent": "GOVP-for-ERPNext/0.1.2",
+            "User-Agent": "GOVP-for-ERPNext/0.1.3",
         }
         if payload is not None:
             headers["Content-Type"] = "application/json"

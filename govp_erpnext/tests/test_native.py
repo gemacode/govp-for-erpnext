@@ -9,7 +9,7 @@ from govp_erpnext.handlers import (
     on_purchase_receipt_submit,
 )
 from govp_erpnext.install import after_install, before_uninstall
-from govp_erpnext.jobs import process_due_jobs
+from govp_erpnext.jobs import _claim_job, process_due_jobs
 
 
 def _company(name, abbreviation):
@@ -73,16 +73,21 @@ class TestGovpErpnextInstallation(FrappeTestCase):
 class TestGovpErpnextLifecycle(FrappeTestCase):
     def setUp(self):
         super().setUp()
+        if not frappe.db.exists("Company"):
+            from erpnext.setup.utils import before_tests
+
+            before_tests()
         self.company_a = _company("GOVP Native A", "GVNA")
         self.company_b = _company("GOVP Native B", "GVNB")
         _settings(self.company_a)
         _settings(self.company_b)
-        frappe.db.delete("GOVP Job", {"company": ["in", [self.company_a, self.company_b]]})
+        frappe.db.delete("GOVP Job", {"company": ["in", [self.company_a, self.company_b, "_Test Company"]]})
 
     def test_issue_jobs_are_idempotent_and_company_scoped(self):
-        on_delivery_note_submit(_source(self.company_a))
-        on_delivery_note_submit(_source(self.company_a))
-        on_delivery_note_submit(_source(self.company_b))
+        with patch("frappe.enqueue"):
+            on_delivery_note_submit(_source(self.company_a))
+            on_delivery_note_submit(_source(self.company_a))
+            on_delivery_note_submit(_source(self.company_b))
         jobs = frappe.get_all("GOVP Job", filters={"action": "Issue"}, fields=["company", "idempotency_key"])
         selected = [job for job in jobs if job.company in {self.company_a, self.company_b}]
         self.assertEqual(len(selected), 2)
@@ -90,13 +95,89 @@ class TestGovpErpnextLifecycle(FrappeTestCase):
         self.assertEqual(len({job.idempotency_key for job in selected}), 2)
 
     def test_purchase_receipt_creates_verification_job(self):
-        on_purchase_receipt_submit(_source(self.company_a, reference="GOVP-NATIVE-001"))
+        with patch("frappe.enqueue"):
+            on_purchase_receipt_submit(_source(self.company_a, reference="GOVP-NATIVE-001"))
         job = frappe.get_last_doc("GOVP Job", {"company": self.company_a, "action": "Verify", "reference": "GOVP-NATIVE-001"})
         self.assertEqual(job.reference, "GOVP-NATIVE-001")
         self.assertEqual(job.status, "Pending")
 
+    def test_real_delivery_and_receipt_documents_fire_hooks(self):
+        from erpnext import get_default_company
+
+        company = get_default_company()
+        _settings(company)
+        warehouse = frappe.db.get_value("Warehouse", {"company": company, "is_group": 0}, "name")
+
+        if not frappe.db.exists("Customer", "GOVP Native Customer"):
+            frappe.get_doc({
+                "doctype": "Customer",
+                "customer_name": "GOVP Native Customer",
+                "customer_type": "Company",
+                "customer_group": "Commercial",
+                "territory": "Rest Of The World",
+            }).insert(ignore_permissions=True)
+        if not frappe.db.exists("Supplier", "GOVP Native Supplier"):
+            frappe.get_doc({
+                "doctype": "Supplier",
+                "supplier_name": "GOVP Native Supplier",
+                "supplier_group": "Services",
+            }).insert(ignore_permissions=True)
+        if not frappe.db.exists("Item", "GOVP-NATIVE-SERVICE"):
+            frappe.get_doc({
+                "doctype": "Item",
+                "item_code": "GOVP-NATIVE-SERVICE",
+                "item_name": "GOVP Native Service",
+                "item_group": "Services",
+                "stock_uom": "Nos",
+                "is_stock_item": 0,
+            }).insert(ignore_permissions=True)
+
+        delivery = frappe.get_doc({
+            "doctype": "Delivery Note",
+            "company": company,
+            "customer": "GOVP Native Customer",
+            "items": [{
+                "item_code": "GOVP-NATIVE-SERVICE",
+                "qty": 2,
+                "rate": 10,
+                "warehouse": warehouse,
+            }],
+        }).insert(ignore_permissions=True)
+        with patch("frappe.enqueue"):
+            delivery.submit()
+        issue = frappe.get_last_doc("GOVP Job", {
+            "source_doctype": "Delivery Note",
+            "source_name": delivery.name,
+            "action": "Issue",
+        })
+        self.assertEqual(issue.company, delivery.company)
+        self.assertEqual(issue.status, "Pending")
+
+        receipt = frappe.get_doc({
+            "doctype": "Purchase Receipt",
+            "company": company,
+            "supplier": "GOVP Native Supplier",
+            "govp_reference": "GOVP-NATIVE-RECEIPT",
+            "items": [{
+                "item_code": "GOVP-NATIVE-SERVICE",
+                "qty": 3,
+                "rate": 8,
+                "warehouse": warehouse,
+            }],
+        }).insert(ignore_permissions=True)
+        with patch("frappe.enqueue"):
+            receipt.submit()
+        verify = frappe.get_last_doc("GOVP Job", {
+            "source_doctype": "Purchase Receipt",
+            "source_name": receipt.name,
+            "action": "Verify",
+        })
+        self.assertEqual(verify.reference, "GOVP-NATIVE-RECEIPT")
+        self.assertEqual(verify.status, "Pending")
+
     def test_verification_job_retries_then_completes_without_duplication(self):
-        on_purchase_receipt_submit(_source(self.company_a, reference="GOVP-NATIVE-RETRY"))
+        with patch("frappe.enqueue"):
+            on_purchase_receipt_submit(_source(self.company_a, reference="GOVP-NATIVE-RETRY"))
 
         class RetryClient:
             def __init__(self, *args, **kwargs):
@@ -127,6 +208,13 @@ class TestGovpErpnextLifecycle(FrappeTestCase):
         self.assertEqual(job.attempts, 2)
         self.assertEqual(job.govp_code, "GOVP-NATIVE-RETRY")
         self.assertEqual(frappe.db.count("GOVP Job", {"company": self.company_a, "action": "Verify", "reference": "GOVP-NATIVE-RETRY"}), 1)
+
+    def test_only_one_worker_can_claim_a_job(self):
+        with patch("frappe.enqueue"):
+            on_purchase_receipt_submit(_source(self.company_a, reference="GOVP-NATIVE-CLAIM"))
+        job = frappe.get_last_doc("GOVP Job", {"company": self.company_a, "reference": "GOVP-NATIVE-CLAIM"})
+        self.assertIsNotNone(_claim_job(job.name))
+        self.assertIsNone(_claim_job(job.name))
 
     def test_cancel_creates_human_reconciliation(self):
         on_delivery_note_cancel(_source(self.company_a, code="GOVP-NATIVE-CANCEL"))

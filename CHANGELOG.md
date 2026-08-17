@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.3 - 2026-08-17
+
+- Reclamación atómica de jobs para impedir que dos workers procesen el mismo
+  documento de forma concurrente.
+- Recuperación automática de trabajos abandonados tras expirar su lease.
+- Prueba nativa con Delivery Note y Purchase Receipt completos, además de una
+  prueba específica de exclusión entre workers.
+
 ## 0.1.2 - 2026-08-17
 
 - Versión coherente entre el paquete Python, la app Frappe y el agente HTTP.
