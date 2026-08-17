@@ -54,8 +54,22 @@ class CoreTest(unittest.TestCase):
         self.assertEqual(result["source"]["platform"], "erpnext")
         self.assertEqual(result["validUntil"], "2026-01-31T00:00:00Z")
 
+    def test_payload_validity_is_stable_across_retries(self):
+        document = {"name":"DN-2", "company":"ACME", "posting_date":"2026-02-03", "items":self.items}
+        first = issuance_payload(document, "site", 30)
+        second = issuance_payload(document, "site", 30)
+        self.assertEqual(first, second)
+        self.assertEqual(first["validUntil"], "2026-03-05T00:00:00Z")
+
+    def test_payload_requires_a_stable_document_date(self):
+        with self.assertRaises(ValueError):
+            issuance_payload({"name":"DN-3", "company":"ACME", "items":self.items}, "site", 30)
+
     def test_https_public_url_is_accepted(self):
         self.assertEqual(validate_exchange_url("https://exchange.example/api/", PUBLIC), "https://exchange.example/api")
+
+    def test_inactive_draft_can_validate_without_dns(self):
+        self.assertEqual(validate_exchange_url("https://exchange.example/api/", None), "https://exchange.example/api")
 
     def test_http_is_rejected(self):
         with self.assertRaises(ValueError): validate_exchange_url("http://exchange.example", PUBLIC)
@@ -98,6 +112,17 @@ class StructureTest(unittest.TestCase):
         settings = json.loads((ROOT / "govp_erpnext/govp_erpnext/doctype/govp_company_settings/govp_company_settings.json").read_text())
         token = next(field for field in settings["fields"] if field["fieldname"] == "connector_token")
         self.assertEqual(token["fieldtype"], "Password")
+        self.assertNotEqual(token.get("reqd"), 1)
+        enabled = next(field for field in settings["fields"] if field["fieldname"] == "enabled")
+        self.assertEqual(enabled["default"], "0")
+
+    def test_install_bootstraps_inactive_company_settings(self):
+        source = (ROOT / "govp_erpnext/install.py").read_text()
+        hooks = (ROOT / "govp_erpnext/hooks.py").read_text()
+        for fragment in ["ensure_all_company_settings", '"enabled": 0', "ensure_company_settings"]:
+            self.assertIn(fragment, source)
+        self.assertIn('"Company"', hooks)
+        self.assertIn("after_insert", hooks)
 
     def test_job_is_company_scoped_and_idempotent(self):
         job = json.loads((ROOT / "govp_erpnext/govp_erpnext/doctype/govp_job/govp_job.json").read_text())

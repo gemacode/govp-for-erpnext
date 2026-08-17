@@ -21,10 +21,36 @@ FIELDS = {
 
 def after_install():
     create_custom_fields(FIELDS, update=True)
+    ensure_all_company_settings()
 
 
 def after_migrate():
     create_custom_fields(FIELDS, update=True)
+    ensure_all_company_settings()
+
+
+def ensure_company_settings(doc, method=None):
+    company = doc if isinstance(doc, str) else getattr(doc, "name", None)
+    if not company or not frappe.db.table_exists("GOVP Company Settings"):
+        return None
+    if frappe.db.exists("GOVP Company Settings", company):
+        return frappe.get_doc("GOVP Company Settings", company)
+    return frappe.get_doc({
+        "doctype": "GOVP Company Settings",
+        "company": company,
+        "enabled": 0,
+        "exchange_url": "https://partners.gemacode.org/api/exchange",
+        "validity_days": 365,
+        "auto_issue_delivery": 1,
+        "auto_verify_receipt": 1,
+    }).insert(ignore_permissions=True)
+
+
+def ensure_all_company_settings():
+    if not frappe.db.table_exists("GOVP Company Settings"):
+        return
+    for company in frappe.get_all("Company", pluck="name"):
+        ensure_company_settings(company)
 
 
 def before_uninstall():

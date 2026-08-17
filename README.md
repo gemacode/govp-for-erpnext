@@ -9,10 +9,10 @@ empresa con GOVP Exchange sin exigirle programar:
 - separa credenciales, idempotencia y cola por compañía;
 - reintenta fallos transitorios sin duplicar GOVP.
 
-## Estado 0.1.3
+## Estado 0.1.4
 
-Candidato abierto. El núcleo y el contrato Frappe tienen 19 pruebas
-autocontenidas. La instalación, migración, documentos completos y 10 pruebas
+Candidato abierto. El núcleo y el contrato Frappe tienen 23 pruebas
+autocontenidas. La instalación, migración, documentos completos y 11 pruebas
 nativas están verificadas en ERPNext 15 y 16. La puerta técnica está superada;
 siguen pendientes un piloto externo y uso supervisado en producción.
 
@@ -26,8 +26,10 @@ bench --site su-sitio install-app govp_erpnext
 bench --site su-sitio migrate
 ```
 
-Abra **GOVP Company Settings**, cree una configuración por compañía, pegue el
-token de conector y pulse **Comprobar conexión**. El token es un campo Password y
+Abra **GOVP Company Settings**: la app crea automáticamente una configuración
+inactiva para cada compañía existente y para cada compañía que se añada después.
+Pegue el token de conector y pulse **Comprobar y activar**. La compañía solo se
+activa cuando Exchange responde correctamente. El token es un campo Password y
 no se escribe en logs. La URL predeterminada es
 `https://partners.gemacode.org/api/exchange` y se exige HTTPS.
 

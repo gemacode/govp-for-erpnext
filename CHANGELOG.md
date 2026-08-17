@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.1.4 - 2026-08-18
+
+- Crea automáticamente una configuración inactiva por cada compañía existente
+  y nueva; el usuario solo pega el token y pulsa **Comprobar y activar**.
+- Impide activar una compañía sin token y mantiene el conector desactivado hasta
+  que la comprobación con Exchange tenga éxito.
+- Deriva `validUntil` de la fecha estable del documento para que todos los
+  reintentos idempotentes envíen exactamente el mismo contenido.
+- Amplía las pruebas autocontenidas y nativas para configuración guiada y
+  vigencia determinista.
+
 ## 0.1.3 - 2026-08-17
 
 - Reclamación atómica de jobs para impedir que dos workers procesen el mismo

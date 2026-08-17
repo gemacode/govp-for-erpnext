@@ -30,17 +30,18 @@ def _company(name, abbreviation):
 
 def _settings(company):
     if frappe.db.exists("GOVP Company Settings", company):
-        return frappe.get_doc("GOVP Company Settings", company)
-    return frappe.get_doc({
-        "doctype": "GOVP Company Settings",
-        "company": company,
+        settings = frappe.get_doc("GOVP Company Settings", company)
+    else:
+        settings = frappe.get_doc({"doctype": "GOVP Company Settings", "company": company})
+    settings.update({
         "enabled": 1,
         "exchange_url": "https://partners.gemacode.org/api/exchange",
         "connector_token": "native-test-token",
         "validity_days": 365,
         "auto_issue_delivery": 1,
         "auto_verify_receipt": 1,
-    }).insert(ignore_permissions=True)
+    })
+    return settings.save(ignore_permissions=True) if settings.name else settings.insert(ignore_permissions=True)
 
 
 def _tree_leaf(doctype, name_field, parent_field, root, leaf):
@@ -87,6 +88,12 @@ class TestGovpErpnextInstallation(FrappeTestCase):
     def test_connector_token_is_a_password_field(self):
         token = frappe.get_meta("GOVP Company Settings").get_field("connector_token")
         self.assertEqual(token.fieldtype, "Password")
+
+    def test_existing_companies_receive_an_inactive_setup_record(self):
+        company = _company("GOVP Setup Draft", "GVSD")
+        settings = frappe.get_doc("GOVP Company Settings", company)
+        self.assertEqual(settings.enabled, 0)
+        self.assertEqual(settings.validity_days, 365)
 
 
 class TestGovpErpnextLifecycle(FrappeTestCase):

@@ -6,7 +6,7 @@ import hashlib
 import ipaddress
 import json
 import socket
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, time, timedelta, timezone
 from decimal import Decimal
 from urllib.parse import urlparse
 
@@ -49,8 +49,22 @@ def idempotency_key(site, company, doctype, name):
     return f"erpnext:{scope}:{document}:submitted"
 
 
+def _validity_anchor(document, now=None):
+    if now is not None:
+        return now.astimezone(timezone.utc) if now.tzinfo else now.replace(tzinfo=timezone.utc)
+    posting_date = document.get("posting_date")
+    if posting_date:
+        value = posting_date if isinstance(posting_date, date) else date.fromisoformat(_text(posting_date)[:10])
+        return datetime.combine(value, time.min, tzinfo=timezone.utc)
+    creation = document.get("creation")
+    if creation:
+        value = creation if isinstance(creation, datetime) else datetime.fromisoformat(_text(creation).replace("Z", "+00:00"))
+        return value.astimezone(timezone.utc) if value.tzinfo else value.replace(tzinfo=timezone.utc)
+    raise ValueError("El documento no contiene una fecha estable para calcular la vigencia GOVP")
+
+
 def issuance_payload(document, site, validity_days=365, now=None):
-    now = now or datetime.now(timezone.utc)
+    anchor = _validity_anchor(document, now)
     document_items = document.get("items", [])
     name = _text(document.get("name"))
     company = _text(document.get("company"))
@@ -64,7 +78,7 @@ def issuance_payload(document, site, validity_days=365, now=None):
         },
         "requirement": "Demostrar la expedición y sus líneas antes de aceptar la recepción.",
         "evidence": [{"label": "Huella canónica de líneas, lotes y series", "sha256": evidence_digest(document_items)}],
-        "validUntil": (now + timedelta(days=int(validity_days))).isoformat().replace("+00:00", "Z"),
+        "validUntil": (anchor + timedelta(days=int(validity_days))).isoformat().replace("+00:00", "Z"),
         "source": {
             "platform": "erpnext",
             "externalId": idempotency_key(site, company, "Delivery Note", name),
@@ -79,6 +93,8 @@ def validate_exchange_url(value, resolver=socket.getaddrinfo):
     host = parsed.hostname.rstrip(".").lower()
     if host in {"localhost", "localhost.localdomain"}:
         raise ValueError("GOVP Exchange no puede apuntar a localhost")
+    if resolver is None:
+        return value.rstrip("/")
     try:
         addresses = {entry[4][0] for entry in resolver(host, parsed.port or 443, type=socket.SOCK_STREAM)}
     except socket.gaierror as error:

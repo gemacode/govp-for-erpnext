@@ -7,6 +7,9 @@ app_license = "Apache-2.0"
 required_apps = ["erpnext"]
 
 doc_events = {
+    "Company": {
+        "after_insert": "govp_erpnext.install.ensure_company_settings",
+    },
     "Delivery Note": {
         "on_submit": "govp_erpnext.handlers.on_delivery_note_submit",
         "on_cancel": "govp_erpnext.handlers.on_delivery_note_cancel",
