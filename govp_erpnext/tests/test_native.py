@@ -74,11 +74,26 @@ class TestGovpErpnextLifecycle(FrappeTestCase):
     def setUp(self):
         super().setUp()
         if not frappe.db.exists("Company"):
-            from erpnext.setup.utils import before_tests
+            try:
+                from erpnext.setup.utils import before_tests
+            except ImportError:
+                # ERPNext 16 removed its private test bootstrap helper. The
+                # public setup stages provide the same master-data fixtures
+                # before company creation on a clean site.
+                from erpnext.setup.setup_wizard.setup_wizard import stage_fixtures
 
-            before_tests()
+                if not frappe.db.exists("Customer Group"):
+                    stage_fixtures(frappe._dict({"country": "Spain"}))
+                _company("GOVP Native A", "GVNA")
+            else:
+                before_tests()
+            # Native bootstrap data must survive the per-test rollback. This
+            # mirrors ERPNext 15's before_tests helper on ERPNext 16.
+            frappe.db.commit()
         self.company_a = _company("GOVP Native A", "GVNA")
         self.company_b = _company("GOVP Native B", "GVNB")
+        if not frappe.defaults.get_global_default("company"):
+            frappe.defaults.set_global_default("company", self.company_a)
         _settings(self.company_a)
         _settings(self.company_b)
         frappe.db.delete("GOVP Job", {"company": ["in", [self.company_a, self.company_b, "_Test Company"]]})
